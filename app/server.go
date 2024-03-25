@@ -22,4 +22,7 @@ func main() {
 	buf := make([]byte, 1024)
 	_, err = c.Read(buf)
 	fmt.Println("Read incoming request:\n", string(buf))
+
+	msg := "HTTP/1.1 200 OK\r\n\r\n"
+	c.Write([]byte(msg))
 }
