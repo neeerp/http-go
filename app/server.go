@@ -38,12 +38,27 @@ func main() {
 	}
 
 	path := parts[1]
-	if path != "/" {
-		msg := "HTTP/1.1 404 NOT FOUND\r\n\r\n"
+	route(path, c)
+}
+
+func route(path string, c net.Conn) {
+	if path == "/" {
+		msg := "HTTP/1.1 200 OK\r\n\r\n"
 		c.Write([]byte(msg))
-		os.Exit(1)
+		os.Exit(0)
 	}
 
-	msg := "HTTP/1.1 200 OK\r\n\r\n"
+	path_parts := strings.SplitN(path, "/", 3)
+	if len(path_parts) > 1 && path_parts[1] == "echo" {
+		content := path_parts[2]
+		content_length := len(content)
+		msg := fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%s", content_length, content)
+		fmt.Println(msg)
+		c.Write([]byte(msg))
+		os.Exit(0)
+	}
+
+	msg := "HTTP/1.1 404 NOT FOUND\r\n\r\n"
 	c.Write([]byte(msg))
+	os.Exit(1)
 }
