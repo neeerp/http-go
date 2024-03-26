@@ -7,6 +7,8 @@ import (
 	"strings"
 )
 
+const USER_AGENT_HEADER = "User-Agent"
+
 func main() {
 	l, err := net.Listen("tcp", "0.0.0.0:4221")
 	if err != nil {
@@ -45,6 +47,10 @@ func main() {
 func parseHeaders(lines []string) map[string]string {
 	headers := make(map[string]string)
 	for _, l := range lines {
+		if len(l) == 0 {
+			break
+		}
+
 		parsed := strings.SplitN(l, ": ", 2)
 		headers[parsed[0]] = parsed[1]
 	}
@@ -82,8 +88,19 @@ func handleEcho(c net.Conn, pathParts []string) {
 }
 
 func handleUserAgent(c net.Conn, headers map[string]string) {
-	fmt.Sprintf("Not implemented yet!")
-	os.Exit(1)
+	userAgent, ok := headers[USER_AGENT_HEADER]
+
+	if !ok {
+		fmt.Sprintf("No User Agent header provided!")
+		msg := "HTTP/1.1 400 BAD REQUEST\r\n\r\n"
+		c.Write([]byte(msg))
+		os.Exit(1)
+	}
+
+	contentLength := len(userAgent)
+	msg := fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%s", contentLength, userAgent)
+	fmt.Println(msg)
+	c.Write([]byte(msg))
 }
 
 func handleNotFound(c net.Conn) {
