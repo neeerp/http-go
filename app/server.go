@@ -1,23 +1,30 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"net"
 	"os"
+	"path"
 	"strings"
 )
 
 const USER_AGENT_HEADER = "User-Agent"
 
-func main() {
-	l, err := net.Listen("tcp", "0.0.0.0:4221")
-	if err != nil {
-		fmt.Println("Failed to bind to port 4221")
-		os.Exit(1)
-	}
+const DIRECTORY_FLAG = "directory"
+const PORT_FLAG = "port"
 
-	// Probably want something like...
-	// Infinite loop to accept connections and spawn worker threads
+const EMPTY_DIR = "/var/empty/"
+const DEFAULT_PORT = 4221
+
+var directory *string
+var port *int
+
+func main() {
+	directory = flag.String(DIRECTORY_FLAG, "", "Directory to take files from")
+	port = flag.Int(PORT_FLAG, DEFAULT_PORT, "Port to listen on")
+
+	l := listen(*port)
 	for {
 		c, err := l.Accept()
 		if err != nil {
@@ -26,6 +33,16 @@ func main() {
 		}
 		go handleConnection(c)
 	}
+}
+
+func listen(port int) net.Listener {
+	l, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", port))
+	if err != nil {
+		fmt.Println("Failed to bind to port ", port)
+		os.Exit(1)
+	}
+
+	return l
 }
 
 func handleConnection(c net.Conn) {
@@ -87,6 +104,8 @@ func route(c net.Conn, path string, headers map[string]string) {
 			handleEcho(c, pathParts)
 		case "user-agent":
 			handleUserAgent(c, headers)
+		case "files":
+			handleFiles(c, pathParts)
 		}
 	}
 
@@ -98,7 +117,6 @@ func handleEcho(c net.Conn, pathParts []string) {
 	content := pathParts[2]
 	contentLength := len(content)
 	msg := fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%s", contentLength, content)
-	fmt.Println(msg)
 	c.Write([]byte(msg))
 	c.Close()
 }
@@ -115,8 +133,33 @@ func handleUserAgent(c net.Conn, headers map[string]string) {
 
 	contentLength := len(userAgent)
 	msg := fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%s", contentLength, userAgent)
-	fmt.Println(msg)
 	c.Write([]byte(msg))
+	c.Close()
+}
+
+func handleFiles(c net.Conn, pathParts []string) {
+	fileName := pathParts[2]
+
+	filePath := path.Join(*directory, fileName)
+	println(filePath)
+	_, err := os.Stat(filePath)
+
+	if err != nil {
+		writeNotFound(c)
+		c.Close()
+		return
+	}
+
+	dat, err := os.ReadFile(filePath)
+	if err != nil {
+		writeNotFound(c)
+		c.Close()
+		return
+	}
+
+	msg := fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: %d\r\n\r\n", len(dat))
+	c.Write([]byte(msg))
+	c.Write(dat)
 	c.Close()
 }
 
