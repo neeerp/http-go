@@ -23,6 +23,7 @@ var port *int
 func main() {
 	directory = flag.String(DIRECTORY_FLAG, "", "Directory to take files from")
 	port = flag.Int(PORT_FLAG, DEFAULT_PORT, "Port to listen on")
+	flag.Parse()
 
 	l := listen(*port)
 	for {
