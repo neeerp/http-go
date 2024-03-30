@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"flag"
 	"fmt"
 	"net"
@@ -54,6 +55,7 @@ func handleConnection(c net.Conn) {
 		respondBadRequest(c)
 		return
 	}
+	buf = bytes.Trim(buf, "\x00")
 
 	request, err := parseRequest(buf)
 	if err != nil {
