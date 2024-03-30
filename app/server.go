@@ -9,13 +9,10 @@ import (
 	"os"
 )
 
-const USER_AGENT_HEADER = "User-Agent"
+const directoryFlag = "directory"
+const portFlag = "port"
 
-const DIRECTORY_FLAG = "directory"
-const PORT_FLAG = "port"
-
-const EMPTY_DIR = "/var/empty/"
-const DEFAULT_PORT = 4221
+const defaultPort = 4221
 
 var directory *string
 var port *int
@@ -23,11 +20,9 @@ var port *int
 const maxRequestSize = 1024
 
 func main() {
-	directory = flag.String(DIRECTORY_FLAG, "", "Directory to take files from")
-	port = flag.Int(PORT_FLAG, DEFAULT_PORT, "Port to listen on")
-	flag.Parse()
+	parseArgs()
 
-	l := listen(*port)
+	l := listen()
 	for {
 		c, err := l.Accept()
 		if err != nil {
@@ -38,10 +33,16 @@ func main() {
 	}
 }
 
-func listen(port int) net.Listener {
-	l, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", port))
+func parseArgs() {
+	directory = flag.String(directoryFlag, "", "Directory to take files from")
+	port = flag.Int(portFlag, defaultPort, "Port to listen on")
+	flag.Parse()
+}
+
+func listen() net.Listener {
+	l, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", *port))
 	if err != nil {
-		fmt.Println("Failed to bind to port ", port)
+		fmt.Println("Failed to bind to port ", *port)
 		os.Exit(1)
 	}
 

@@ -16,6 +16,8 @@ const filesPath = "/files/"
 const get = "GET"
 const post = "POST"
 
+const userAgentHeader = "User-Agent"
+
 func route(c net.Conn, request Request) {
 	switch {
 	case exactMatch(request, rootRoute, get):
@@ -48,7 +50,7 @@ func handleEcho(c net.Conn, request Request) {
 }
 
 func handleUserAgent(c net.Conn, request Request) {
-	userAgent, ok := request.headers[USER_AGENT_HEADER]
+	userAgent, ok := request.headers[userAgentHeader]
 
 	if !ok {
 		fmt.Sprintf("No User Agent header provided!")
