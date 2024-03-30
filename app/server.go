@@ -82,7 +82,9 @@ func route(c net.Conn, request Request) {
 	case match(request, userAgentRoute, get):
 		handleUserAgent(c, request)
 	case match(request, filesPath, get):
-		handleFiles(c, request)
+		handleGetFiles(c, request)
+	case match(request, filesPath, post):
+		handlePostFiles(c, request)
 
 	default:
 		respondNotFound(c)
@@ -119,7 +121,7 @@ func handleUserAgent(c net.Conn, request Request) {
 	c.Close()
 }
 
-func handleFiles(c net.Conn, request Request) {
+func handleGetFiles(c net.Conn, request Request) {
 	fileName, valid := strings.CutPrefix(request.uri, filesPath)
 	if !valid {
 		fmt.Println("No file name given!")
@@ -147,13 +149,20 @@ func handleFiles(c net.Conn, request Request) {
 	c.Close()
 }
 
-func handlePost(c net.Conn, pathParts []string, body string) {
-	fileName := pathParts[2]
+func handlePostFiles(c net.Conn, request Request) {
+	fileName, valid := strings.CutPrefix(request.uri, filesPath)
+	if !valid {
+		fmt.Println("No file name given!")
+		respondBadRequest(c)
+		return
+	}
+
 	filePath := path.Join(*directory, fileName)
 
-	os.WriteFile(filePath, []byte(body), 0644)
+	os.WriteFile(filePath, []byte(request.body), 0644)
 	msg := "HTTP/1.1 201 ACCEPTED\r\n\r\n"
 	c.Write([]byte(msg))
+	c.Close()
 }
 
 func respondNotFound(c net.Conn) {
