@@ -51,72 +51,61 @@ func handleConnection(c net.Conn) {
 	_, err := c.Read(buf)
 	if err != nil {
 		fmt.Println("Error reading from connection: ", err.Error())
-		return
-	}
-
-	fmt.Println("Read incoming request:\n", string(buf))
-
-	lines := strings.Split(string(buf), "\r\n")
-	if len(lines) < 1 {
-		fmt.Println("Startline missing!")
 		writeBadRequest(c)
+		c.Close()
 		return
 	}
 
-	startLine := lines[0]
-	parts := strings.Split(startLine, " ")
-	if len(parts) < 3 {
-		fmt.Println("Startline malformed!")
+	request, err := parseRequest(buf)
+	if err != nil {
+		fmt.Println("Error parsing request: ", err.Error())
 		writeBadRequest(c)
+		c.Close()
 		return
 	}
 
-	headers := parseHeaders(lines[1:])
-	path := parts[1]
-	route(c, path, headers)
-
+	route(c, request)
 }
 
-func parseHeaders(lines []string) map[string]string {
-	headers := make(map[string]string)
-	for _, l := range lines {
-		if len(l) == 0 {
-			break
+func route(c net.Conn, request Request) {
+
+	pathParts := strings.SplitN(request.uri, "/", 3)
+
+	switch {
+	case request.uri == "/":
+		{
+			handleRoot(c)
+		}
+	case strings.HasPrefix(request.uri, "/echo/"):
+		{
+			handleEcho(c, request)
 		}
 
-		parsed := strings.SplitN(l, ": ", 2)
-		headers[parsed[0]] = parsed[1]
+	default:
+		respondNotFound(c)
 	}
 
-	return headers
-}
-
-func route(c net.Conn, path string, headers map[string]string) {
-	if path == "/" {
-		msg := "HTTP/1.1 200 OK\r\n\r\n"
-		c.Write([]byte(msg))
-		c.Close()
-	}
-
-	pathParts := strings.SplitN(path, "/", 3)
 	if len(pathParts) > 1 {
 		switch pathParts[1] {
-		case "echo":
-			handleEcho(c, pathParts)
 		case "user-agent":
-			handleUserAgent(c, headers)
+			handleUserAgent(c, request.headers)
 		case "files":
-			handleFiles(c, pathParts)
+			handleFiles(c, pathParts, request.body)
 		}
 	}
 
-	writeNotFound(c)
+}
+
+func handleRoot(c net.Conn) {
+	msg := "HTTP/1.1 200 OK\r\n\r\n"
+	c.Write([]byte(msg))
 	c.Close()
 }
 
-func handleEcho(c net.Conn, pathParts []string) {
-	content := pathParts[2]
+func handleEcho(c net.Conn, request Request) {
+	content, _ := strings.CutPrefix(request.uri, "/echo/")
 	contentLength := len(content)
+
 	msg := fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%s", contentLength, content)
 	c.Write([]byte(msg))
 	c.Close()
@@ -138,7 +127,7 @@ func handleUserAgent(c net.Conn, headers map[string]string) {
 	c.Close()
 }
 
-func handleFiles(c net.Conn, pathParts []string) {
+func handleFiles(c net.Conn, pathParts []string, body string) {
 	fileName := pathParts[2]
 
 	filePath := path.Join(*directory, fileName)
@@ -146,15 +135,13 @@ func handleFiles(c net.Conn, pathParts []string) {
 	_, err := os.Stat(filePath)
 
 	if err != nil {
-		writeNotFound(c)
-		c.Close()
+		respondNotFound(c)
 		return
 	}
 
 	dat, err := os.ReadFile(filePath)
 	if err != nil {
-		writeNotFound(c)
-		c.Close()
+		respondNotFound(c)
 		return
 	}
 
@@ -164,9 +151,19 @@ func handleFiles(c net.Conn, pathParts []string) {
 	c.Close()
 }
 
-func writeNotFound(c net.Conn) {
+func handlePost(c net.Conn, pathParts []string, body string) {
+	fileName := pathParts[2]
+	filePath := path.Join(*directory, fileName)
+
+	os.WriteFile(filePath, []byte(body), 0644)
+	msg := "HTTP/1.1 201 ACCEPTED\r\n\r\n"
+	c.Write([]byte(msg))
+}
+
+func respondNotFound(c net.Conn) {
 	msg := "HTTP/1.1 404 NOT FOUND\r\n\r\n"
 	c.Write([]byte(msg))
+	c.Close()
 }
 
 func writeBadRequest(c net.Conn) {
