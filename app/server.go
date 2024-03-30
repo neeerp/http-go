@@ -46,6 +46,8 @@ func listen(port int) net.Listener {
 }
 
 func handleConnection(c net.Conn) {
+	defer c.Close()
+
 	buf := make([]byte, 1024)
 	_, err := c.Read(buf)
 	if err != nil {

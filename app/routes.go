@@ -37,7 +37,6 @@ func route(c net.Conn, request Request) {
 func handleRoot(c net.Conn) {
 	msg := "HTTP/1.1 200 OK\r\n\r\n"
 	c.Write([]byte(msg))
-	c.Close()
 }
 
 func handleEcho(c net.Conn, request Request) {
@@ -46,7 +45,6 @@ func handleEcho(c net.Conn, request Request) {
 
 	msg := fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%s", contentLength, content)
 	c.Write([]byte(msg))
-	c.Close()
 }
 
 func handleUserAgent(c net.Conn, request Request) {
@@ -61,7 +59,6 @@ func handleUserAgent(c net.Conn, request Request) {
 	contentLength := len(userAgent)
 	msg := fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%s", contentLength, userAgent)
 	c.Write([]byte(msg))
-	c.Close()
 }
 
 func handleGetFiles(c net.Conn, request Request) {
@@ -89,7 +86,6 @@ func handleGetFiles(c net.Conn, request Request) {
 	msg := fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: %d\r\n\r\n", len(dat))
 	c.Write([]byte(msg))
 	c.Write(dat)
-	c.Close()
 }
 
 func handlePostFiles(c net.Conn, request Request) {
@@ -105,19 +101,16 @@ func handlePostFiles(c net.Conn, request Request) {
 	os.WriteFile(filePath, []byte(request.body), 0644)
 	msg := "HTTP/1.1 201 ACCEPTED\r\n\r\n"
 	c.Write([]byte(msg))
-	c.Close()
 }
 
 func respondNotFound(c net.Conn) {
 	msg := "HTTP/1.1 404 NOT FOUND\r\n\r\n"
 	c.Write([]byte(msg))
-	c.Close()
 }
 
 func respondBadRequest(c net.Conn) {
 	msg := "HTTP/1.1 400 BAD REQUEST\r\n\r\n"
 	c.Write([]byte(msg))
-	c.Close()
 }
 
 func exactMatch(request Request, uri string, method string) bool {
