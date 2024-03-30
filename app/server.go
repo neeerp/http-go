@@ -67,7 +67,7 @@ func handleConnection(c net.Conn) {
 
 const rootRoute = "/"
 const echoRoute = "/echo/"
-const userAgentRoute = "/user-agent/"
+const userAgentRoute = "/user-agent"
 const filesPath = "/files/"
 
 const get = "GET"
