@@ -71,7 +71,7 @@ const userAgentRoute = "/user-agent"
 const filesPath = "/files/"
 
 const get = "GET"
-const post = "post"
+const post = "POST"
 
 func route(c net.Conn, request Request) {
 	switch {
