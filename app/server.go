@@ -70,15 +70,18 @@ const echoRoute = "/echo/"
 const userAgentRoute = "/user-agent/"
 const filesPath = "/files/"
 
+const get = "GET"
+const post = "post"
+
 func route(c net.Conn, request Request) {
 	switch {
-	case request.uri == rootRoute:
+	case match(request, rootRoute, get):
 		handleRoot(c)
-	case strings.HasPrefix(request.uri, echoRoute):
+	case match(request, echoRoute, get):
 		handleEcho(c, request)
-	case strings.HasPrefix(request.uri, userAgentRoute):
+	case match(request, userAgentRoute, get):
 		handleUserAgent(c, request)
-	case strings.HasPrefix(request.uri, filesPath):
+	case match(request, filesPath, get):
 		handleFiles(c, request)
 
 	default:
@@ -163,4 +166,8 @@ func respondBadRequest(c net.Conn) {
 	msg := "HTTP/1.1 400 BAD REQUEST\r\n\r\n"
 	c.Write([]byte(msg))
 	c.Close()
+}
+
+func match(request Request, prefix string, method string) bool {
+	return strings.HasPrefix(request.uri, prefix) && request.method == method
 }
