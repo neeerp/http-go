@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"flag"
 	"fmt"
 	"net"
@@ -18,6 +19,8 @@ const DEFAULT_PORT = 4221
 
 var directory *string
 var port *int
+
+const maxRequestSize = 1024
 
 func main() {
 	directory = flag.String(DIRECTORY_FLAG, "", "Directory to take files from")
@@ -48,14 +51,11 @@ func listen(port int) net.Listener {
 func handleConnection(c net.Conn) {
 	defer c.Close()
 
-	buf := make([]byte, 1024)
-	_, err := c.Read(buf)
+	buf, err := readRequest(c)
 	if err != nil {
-		fmt.Println("Error reading from connection: ", err.Error())
 		respondBadRequest(c)
 		return
 	}
-	buf = bytes.Trim(buf, "\x00")
 
 	request, err := parseRequest(buf)
 	if err != nil {
@@ -65,4 +65,15 @@ func handleConnection(c net.Conn) {
 	}
 
 	route(c, request)
+}
+
+func readRequest(c net.Conn) (buf []byte, err error) {
+	buf = make([]byte, maxRequestSize)
+	_, e := c.Read(buf)
+	if e != nil {
+		fmt.Println("Error reading from connection: ", err.Error())
+		err = errors.New("error reading from connection")
+	}
+	buf = bytes.Trim(buf, "\x00")
+	return
 }
