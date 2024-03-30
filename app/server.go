@@ -75,7 +75,7 @@ const post = "post"
 
 func route(c net.Conn, request Request) {
 	switch {
-	case match(request, rootRoute, get):
+	case exactMatch(request, rootRoute, get):
 		handleRoot(c)
 	case match(request, echoRoute, get):
 		handleEcho(c, request)
@@ -175,6 +175,10 @@ func respondBadRequest(c net.Conn) {
 	msg := "HTTP/1.1 400 BAD REQUEST\r\n\r\n"
 	c.Write([]byte(msg))
 	c.Close()
+}
+
+func exactMatch(request Request, uri string, method string) bool {
+	return request.uri == uri && request.method == method
 }
 
 func match(request Request, prefix string, method string) bool {
