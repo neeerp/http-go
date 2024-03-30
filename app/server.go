@@ -72,7 +72,7 @@ func readRequest(c net.Conn) (buf []byte, err error) {
 	buf = make([]byte, maxRequestSize)
 	_, e := c.Read(buf)
 	if e != nil {
-		fmt.Println("Error reading from connection: ", err.Error())
+		fmt.Println("Error reading from connection: ", e.Error())
 		err = errors.New("error reading from connection")
 	}
 	buf = bytes.Trim(buf, "\x00")
