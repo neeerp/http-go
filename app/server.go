@@ -51,49 +51,39 @@ func handleConnection(c net.Conn) {
 	_, err := c.Read(buf)
 	if err != nil {
 		fmt.Println("Error reading from connection: ", err.Error())
-		writeBadRequest(c)
-		c.Close()
+		respondBadRequest(c)
 		return
 	}
 
 	request, err := parseRequest(buf)
 	if err != nil {
 		fmt.Println("Error parsing request: ", err.Error())
-		writeBadRequest(c)
-		c.Close()
+		respondBadRequest(c)
 		return
 	}
 
 	route(c, request)
 }
 
+const rootRoute = "/"
+const echoRoute = "/echo/"
+const userAgentRoute = "/user-agent/"
+const filesPath = "/files/"
+
 func route(c net.Conn, request Request) {
-
-	pathParts := strings.SplitN(request.uri, "/", 3)
-
 	switch {
-	case request.uri == "/":
-		{
-			handleRoot(c)
-		}
-	case strings.HasPrefix(request.uri, "/echo/"):
-		{
-			handleEcho(c, request)
-		}
+	case request.uri == rootRoute:
+		handleRoot(c)
+	case strings.HasPrefix(request.uri, echoRoute):
+		handleEcho(c, request)
+	case strings.HasPrefix(request.uri, userAgentRoute):
+		handleUserAgent(c, request)
+	case strings.HasPrefix(request.uri, filesPath):
+		handleFiles(c, request)
 
 	default:
 		respondNotFound(c)
 	}
-
-	if len(pathParts) > 1 {
-		switch pathParts[1] {
-		case "user-agent":
-			handleUserAgent(c, request.headers)
-		case "files":
-			handleFiles(c, pathParts, request.body)
-		}
-	}
-
 }
 
 func handleRoot(c net.Conn) {
@@ -103,7 +93,7 @@ func handleRoot(c net.Conn) {
 }
 
 func handleEcho(c net.Conn, request Request) {
-	content, _ := strings.CutPrefix(request.uri, "/echo/")
+	content, _ := strings.CutPrefix(request.uri, echoRoute)
 	contentLength := len(content)
 
 	msg := fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%s", contentLength, content)
@@ -111,13 +101,12 @@ func handleEcho(c net.Conn, request Request) {
 	c.Close()
 }
 
-func handleUserAgent(c net.Conn, headers map[string]string) {
-	userAgent, ok := headers[USER_AGENT_HEADER]
+func handleUserAgent(c net.Conn, request Request) {
+	userAgent, ok := request.headers[USER_AGENT_HEADER]
 
 	if !ok {
 		fmt.Sprintf("No User Agent header provided!")
-		writeBadRequest(c)
-		c.Close()
+		respondBadRequest(c)
 		return
 	}
 
@@ -127,11 +116,15 @@ func handleUserAgent(c net.Conn, headers map[string]string) {
 	c.Close()
 }
 
-func handleFiles(c net.Conn, pathParts []string, body string) {
-	fileName := pathParts[2]
+func handleFiles(c net.Conn, request Request) {
+	fileName, valid := strings.CutPrefix(request.uri, filesPath)
+	if !valid {
+		fmt.Println("No file name given!")
+		respondBadRequest(c)
+		return
+	}
 
 	filePath := path.Join(*directory, fileName)
-	println(filePath)
 	_, err := os.Stat(filePath)
 
 	if err != nil {
@@ -166,7 +159,8 @@ func respondNotFound(c net.Conn) {
 	c.Close()
 }
 
-func writeBadRequest(c net.Conn) {
+func respondBadRequest(c net.Conn) {
 	msg := "HTTP/1.1 400 BAD REQUEST\r\n\r\n"
 	c.Write([]byte(msg))
+	c.Close()
 }
