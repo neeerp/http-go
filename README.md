@@ -24,8 +24,8 @@ The entry point to the server lies in `server.go`. Here is where we bind to the 
 requests in a loop.
 
 ### Request Parsing
-Request parsing happens in `request.go`. We simply map the raw bytes to a struct that has the status line data, a header
-map, and the body.
+Request parsing happens in `request.go`. We simply map the raw bytes to a struct that has the request line (i.e. first
+line of the request) data, a header map, and the body.
 
 ### Routing and Request Handling
 Routing and request handling logic lives in `routes.go`. It's just a switch statement on method + exact or prefix route
